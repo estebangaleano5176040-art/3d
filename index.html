@@ -60,23 +60,20 @@
       animation: false
     });
 
-   // 3. Load your 3D Tileset
+ // 3. Load your 3D Tileset
     Cesium.Cesium3DTileset.fromIonAssetId(5169369)
       .then(tileset => {
         viewer.scene.primitives.add(tileset);
         
-        // --- THE FIX: Teleport the model to the surface ---
-        // Placing it in Luque so the camera math has a proper "Up" direction
-        const surfacePosition = Cesium.Cartesian3.fromDegrees(-57.4856, -25.2725, 0.0);
+        // --- THE FIX: Teleport the model to the exact drone coordinates ---
+        const surfacePosition = Cesium.Cartesian3.fromDegrees(-57.618601, -25.282397, 0.0);
         tileset.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(surfacePosition);
 
         // Target the camera properly
         const rootTile = tileset.root;
         const boundingSphere = rootTile.contentBoundingVolume ? rootTile.contentBoundingVolume.boundingSphere : rootTile.boundingVolume.boundingSphere;
         
-        // Offset adjustments: 
-        // Pitch -0.8 forces the camera to look down from above the roof. 
-        // radius * 2.5 pulls the camera further back so you don't spawn inside a wall.
+        // Offset adjustments:
         const offset = new Cesium.HeadingPitchRange(0.0, -0.8, boundingSphere.radius * 2.5);
         viewer.camera.flyToBoundingSphere(boundingSphere, { duration: 0, offset: offset });
       })
