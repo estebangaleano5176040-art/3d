@@ -14,14 +14,38 @@
       overflow: hidden;
       background-color: #1a1a1a;
     }
+    #controlsUI {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 15px;
+      font-family: sans-serif;
+      border-radius: 5px;
+      pointer-events: none;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  
+  <!-- On-screen instructions so your clients know how to fly -->
+  <div id="controlsUI">
+    <strong>Drone Controls:</strong><br>
+    <b>W / S</b> - Move Forward / Backward<br>
+    <b>A / D</b> - Move Left / Right<br>
+    <b>Q / E</b> - Move Up / Down<br>
+    <b>Shift</b> - Hold to fly faster<br>
+    <b>Mouse Drag</b> - Look around
+  </div>
+
   <script>
-    // Paste your Cesium ion Default Access Token here
+    // 1. Paste your Cesium ion Default Access Token here
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InJfWVZCTUFCZXMxVWJ2VHciLCJqdGkiOiI1ZTJhNGJiOS1lODMxLTQ4MGItYmEwNS03Yzk2MGFlMDA1ODEiLCJpZCI6NDc1NjU3LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODgwMjkyNzF9.V2xyUzJro_9DWIOxDcAFU9e_tREv1vlEc4jjxNJDmc8';
 
+    // 2. Initialize viewer 
     const viewer = new Cesium.Viewer('cesiumContainer', {
       globe: false,
       skyAtmosphere: false,
@@ -36,11 +60,10 @@
       animation: false
     });
 
+    // 3. Load your 3D Tileset
     Cesium.Cesium3DTileset.fromIonAssetId(5169369)
       .then(tileset => {
         viewer.scene.primitives.add(tileset);
-        
-        // Fix for Agisoft Metashape's oversized bounding boxes
         const rootTile = tileset.root;
         const boundingSphere = rootTile.contentBoundingVolume ? rootTile.contentBoundingVolume.boundingSphere : rootTile.boundingVolume.boundingSphere;
         const offset = new Cesium.HeadingPitchRange(0, -0.5, boundingSphere.radius * 1.5);
@@ -49,6 +72,68 @@
       .catch(error => {
         console.error('Error loading tileset:', error);
       });
+
+    // 4. --- DRONE CAMERA CONTROLS ---
+
+    // Object to track which keys are currently held down
+    const flags = {
+      moveForward: false,
+      moveBackward: false,
+      moveUp: false,
+      moveDown: false,
+      moveLeft: false,
+      moveRight: false,
+      speedUp: false
+    }; //
+
+    // Listen for keys being pressed down
+    document.addEventListener('keydown', function(e) {
+      switch (e.code) {
+        case 'KeyW': flags.moveForward = true; break;
+        case 'KeyS': flags.moveBackward = true; break;
+        case 'KeyD': flags.moveRight = true; break;
+        case 'KeyA': flags.moveLeft = true; break;
+        case 'KeyQ': flags.moveUp = true; break;
+        case 'KeyE': flags.moveDown = true; break;
+        case 'ShiftLeft': 
+        case 'ShiftRight': flags.speedUp = true; break;
+      }
+    }, false); //
+
+    // Listen for keys being released
+    document.addEventListener('keyup', function(e) {
+      switch (e.code) {
+        case 'KeyW': flags.moveForward = false; break;
+        case 'KeyS': flags.moveBackward = false; break;
+        case 'KeyD': flags.moveRight = false; break;
+        case 'KeyA': flags.moveLeft = false; break;
+        case 'KeyQ': flags.moveUp = false; break;
+        case 'KeyE': flags.moveDown = false; break;
+        case 'ShiftLeft': 
+        case 'ShiftRight': flags.speedUp = false; break;
+      }
+    }, false); //
+
+    // Update the camera position continuously before rendering every frame
+    viewer.clock.onTick.addEventListener(function(clock) {
+      const camera = viewer.camera;
+      
+      // Set a base movement speed (meters per frame)
+      let moveRate = 1.0; 
+      
+      // Boost the speed if Shift is held down
+      if (flags.speedUp) {
+          moveRate *= 4.0;
+      }
+
+      // Execute movement based on active flags
+      if (flags.moveForward) { camera.moveForward(moveRate); } //
+      if (flags.moveBackward) { camera.moveBackward(moveRate); } //
+      if (flags.moveUp) { camera.moveUp(moveRate); } //
+      if (flags.moveDown) { camera.moveDown(moveRate); } //
+      if (flags.moveLeft) { camera.moveLeft(moveRate); } //
+      if (flags.moveRight) { camera.moveRight(moveRate); } //
+    });
   </script>
 </body>
 </html>
